@@ -1,0 +1,290 @@
+css
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+    --primary: 222.2 47.4% 11.2%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 222.2 84% 4.9%;
+    --radius: 0.5rem;
+    --chart-1: 12 76% 61%;
+    --chart-2: 173 58% 39%;
+    --chart-3: 197 37% 24%;
+    --chart-4: 43 74% 66%;
+    --chart-5: 27 87% 67%;
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 210 40% 98%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 212.7 26.8% 83.9%;
+  }
+}
+
+/* ====================================
+   TEMA CLARO (por defecto)
+   ==================================== */
+:root {
+  --bg-page: #FFFFFF;
+  --bg-surface: #FFFFFF;
+  --bg-secondary: #F9FAFB;
+  --text-primary: #111827;
+  --text-secondary: #6B7280;
+  --border-color: #E5E7EB;
+}
+
+/* ====================================
+   MODO OSCURO
+   ==================================== */
+.dark {
+  --bg-page: #0F172A;
+  --bg-surface: #1E293B;
+  --bg-secondary: #334155;
+  --text-primary: #FFFFFF;
+  --text-secondary: #E2E8F0;
+  --border-color: #475569;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* ====================================
+   MODO OSCURO - OVERRIDES ESPECÍFICOS
+   ==================================== */
+
+/* Fondos principales */
+.dark .bg-white {
+  background-color: var(--bg-surface) !important;
+}
+
+.dark .bg-gray-50,
+.dark .bg-slate-50 {
+  background-color: var(--bg-page) !important;
+}
+
+.dark .bg-gray-100 {
+  background-color: var(--bg-secondary) !important;
+}
+
+/* Gradientes de página */
+.dark .bg-gradient-to-br.from-slate-50,
+.dark .bg-gradient-to-br.from-violet-50,
+.dark .bg-gradient-to-br.to-violet-50,
+.dark .bg-gradient-to-br.to-cyan-50 {
+  background: var(--bg-page) !important;
+}
+
+/* Bordes */
+.dark .border-gray-200,
+.dark .border-gray-100,
+.dark .border-slate-200 {
+  border-color: var(--border-color) !important;
+}
+
+/* Texto blanco en modo oscuro */
+.dark h1,
+.dark h2,
+.dark h3,
+.dark h4,
+.dark h5,
+.dark h6,
+.dark p,
+.dark span:not(.bg-violet-600 *):not(.bg-indigo-600 *):not(.bg-purple-600 *),
+.dark label,
+.dark li {
+  color: #FFFFFF !important;
+}
+
+.dark .text-gray-600,
+.dark .text-gray-700,
+.dark .text-gray-800,
+.dark .text-gray-900 {
+  color: #FFFFFF !important;
+}
+
+.dark .text-gray-500 {
+  color: var(--text-secondary) !important;
+}
+
+/* Cards y superficies */
+.dark .rounded-xl,
+.dark .shadow,
+.dark .shadow-sm,
+.dark .shadow-lg,
+.dark .shadow-2xl {
+  background-color: var(--bg-surface) !important;
+}
+
+/* Navbar y footer */
+.dark nav {
+  background-color: var(--bg-surface) !important;
+  border-color: var(--border-color) !important;
+}
+
+.dark footer {
+  background-color: var(--bg-surface) !important;
+  border-color: var(--border-color) !important;
+}
+
+/* Inputs */
+.dark input,
+.dark textarea,
+.dark select {
+  background-color: var(--bg-secondary) !important;
+  color: #FFFFFF !important;
+  border-color: var(--border-color) !important;
+}
+
+.dark input::placeholder,
+.dark textarea::placeholder {
+  color: rgba(255, 255, 255, 0.5) !important;
+}
+
+/* Tablas */
+.dark table {
+  background-color: var(--bg-surface) !important;
+}
+
+.dark th,
+.dark td {
+  color: #FFFFFF !important;
+  border-color: var(--border-color) !important;
+}
+
+/* Alertas y badges */
+.dark .bg-blue-50,
+.dark .bg-amber-50,
+.dark .bg-emerald-50,
+.dark .bg-red-50,
+.dark .bg-violet-50 {
+  background-color: var(--bg-secondary) !important;
+}
+
+.dark .bg-blue-100,
+.dark .bg-amber-100,
+.dark .bg-violet-100,
+.dark .bg-purple-100,
+.dark .bg-pink-100,
+.dark .bg-green-100,
+.dark .bg-indigo-100 {
+  background-color: #475569 !important;
+}
+
+.dark .text-blue-700,
+.dark .text-blue-800,
+.dark .text-amber-700,
+.dark .text-amber-800,
+.dark .text-emerald-800,
+.dark .text-red-800,
+.dark .text-violet-600,
+.dark .text-violet-700,
+.dark .text-indigo-800,
+.dark .text-purple-800,
+.dark .text-pink-800,
+.dark .text-green-800 {
+  color: #FFFFFF !important;
+}
+
+.dark .border-blue-200,
+.dark .border-amber-200,
+.dark .border-red-200 {
+  border-color: var(--border-color) !important;
+}
+
+/* Botones */
+.dark button:not(.bg-violet-600):not(.bg-indigo-600):not(.bg-blue-600) {
+  color: #FFFFFF !important;
+}
+
+/* Links */
+.dark a {
+  color: #60A5FA !important;
+}
+
+.dark a:hover {
+  color: #93C5FD !important;
+}
+
+/* Dropdown menus */
+.dark [role="menu"],
+.dark [role="dialog"] {
+  background-color: var(--bg-surface) !important;
+  border-color: var(--border-color) !important;
+}
+
+/* Headers de protocolo - mantener colores pero texto blanco */
+.dark .bg-blue-500 *,
+.dark .bg-purple-500 *,
+.dark .bg-rose-500 *,
+.dark .bg-indigo-500 * {
+  color: #FFFFFF !important;
+}
+
+/* Gradiente header - oscurecerlo */
+.dark .bg-gradient-to-br.from-violet-600.via-purple-600.to-indigo-700 {
+  background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%) !important;
+}
+
+/* Backdrop blur navbar */
+.dark .backdrop-blur {
+  background-color: rgba(30, 41, 59, 0.95) !important;
+}
+
+/* Scrollbars */
+.dark ::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.dark ::-webkit-scrollbar-track {
+  background: var(--bg-surface);
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: var(--bg-secondary);
+  border-radius: 5px;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
