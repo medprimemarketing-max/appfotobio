@@ -1,16 +1,56 @@
 import { Router } from "express";
 import { AuthRequest, requireAuth } from "../middleware/auth";
+import { z } from "zod";
 import pool from "../db";
 
 const router = Router();
 
+// HTML sanitization - strip all tags, attributes, and event handlers
+// Notes are stored as plain text, so we aggressively remove all HTML
+function sanitizeContent(str: string): string {
+  // First decode HTML entities to catch encoded attacks
+  let clean = str
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&amp;/g, "&")
+    .replace(/&quot;/g, '"')
+    .replace(/&#x27;/g, "'");
+  // Remove all HTML tags (including self-closing and malformed)
+  clean = clean.replace(/<\/?[^>]+(>|$)/g, "");
+  // Remove any remaining event handler patterns
+  clean = clean.replace(/on\w+\s*=\s*["'][^"']*["']/gi, "");
+  // Remove javascript: protocol
+  clean = clean.replace(/javascript\s*:/gi, "");
+  // Trim excessive whitespace
+  clean = clean.replace(/\s{3,}/g, "  ").trim();
+  return clean;
+}
+
+// Zod schemas
+const getNotesQuerySchema = z.object({
+  pathology_id: z.string().max(100, "pathology_id too long"),
+});
+
+const createNoteSchema = z.object({
+  pathology_id: z.string().min(1).max(100, "pathology_id too long"),
+  content: z.string().min(1).max(10000, "content too long"),
+  images: z.array(z.string()).max(10, "too many images").optional(),
+});
+
+const updateNoteSchema = z.object({
+  content: z.string().max(10000, "content too long").optional(),
+  images: z.array(z.string()).max(10, "too many images").optional(),
+});
+
 // GET /api/notes?pathology_id=X - List notes for current user
 router.get("/", requireAuth, async (req: AuthRequest, res) => {
-  const { pathology_id } = req.query;
+  const parsed = getNotesQuerySchema.safeParse(req.query);
 
-  if (!pathology_id) {
-    return res.status(400).json({ error: "pathology_id is required" });
+  if (!parsed.success) {
+    return res.status(400).json({ error: parsed.error.errors[0].message });
   }
+
+  const { pathology_id } = parsed.data;
 
   try {
     const result = await pool.query(
@@ -30,11 +70,14 @@ router.get("/", requireAuth, async (req: AuthRequest, res) => {
 
 // POST /api/notes - Create a new clinical note
 router.post("/", requireAuth, async (req: AuthRequest, res) => {
-  const { pathology_id, content, images } = req.body;
+  const parsed = createNoteSchema.safeParse(req.body);
 
-  if (!pathology_id || !content) {
-    return res.status(400).json({ error: "pathology_id and content are required" });
+  if (!parsed.success) {
+    return res.status(400).json({ error: parsed.error.errors[0].message });
   }
+
+  const { pathology_id, images } = parsed.data;
+  const content = sanitizeContent(parsed.data.content);
 
   try {
     const result = await pool.query(
@@ -71,7 +114,17 @@ router.post("/", requireAuth, async (req: AuthRequest, res) => {
 // PUT /api/notes/:id - Update a clinical note
 router.put("/:id", requireAuth, async (req: AuthRequest, res) => {
   const { id } = req.params;
-  const { content, images } = req.body;
+
+  const parsed = updateNoteSchema.safeParse(req.body);
+
+  if (!parsed.success) {
+    return res.status(400).json({ error: parsed.error.errors[0].message });
+  }
+
+  const { images } = parsed.data;
+  const content = parsed.data.content !== undefined
+    ? sanitizeContent(parsed.data.content)
+    : undefined;
 
   try {
     // Verify ownership

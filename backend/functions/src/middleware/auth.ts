@@ -42,7 +42,7 @@ export async function requireAuth(
     req.userRole = result.rows[0].role;
     req.userEmail = result.rows[0].email;
 
-    next();
+    return next();
   } catch (error) {
     console.error("Auth middleware error:", error);
     return res.status(401).json({ error: "Invalid or expired token" });
@@ -60,5 +60,5 @@ export function requireAdmin(
   if (req.userRole !== "admin") {
     return res.status(403).json({ error: "Admin access required" });
   }
-  next();
+  return next();
 }

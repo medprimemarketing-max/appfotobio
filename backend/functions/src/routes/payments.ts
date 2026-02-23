@@ -1,8 +1,65 @@
 import { Router, Request, Response } from "express";
 import { AuthRequest, requireAuth } from "../middleware/auth";
+import { createHmac, timingSafeEqual } from "crypto";
+import { z } from "zod";
 import pool from "../db";
+import { sendEmailViaSinaptya } from "../services/emailService";
 
 const router = Router();
+
+// Zod schemas
+const captureOrderSchema = z.object({
+  orderId: z.string().min(1, "orderId is required"),
+});
+
+// Verify MercadoPago webhook signature
+function verifyMercadoPagoSignature(req: Request): boolean {
+  const webhookSecret = process.env.MERCADOPAGO_WEBHOOK_SECRET;
+
+  if (!webhookSecret) {
+    console.error(
+      "MERCADOPAGO_WEBHOOK_SECRET not configured - rejecting webhook"
+    );
+    return false;
+  }
+
+  const xSignature = req.headers["x-signature"] as string | undefined;
+  const xRequestId = req.headers["x-request-id"] as string | undefined;
+
+  if (!xSignature || !xRequestId) {
+    return false;
+  }
+
+  // Parse x-signature: "ts=TIMESTAMP,v1=HASH"
+  const parts: Record<string, string> = {};
+  for (const part of xSignature.split(",")) {
+    const [key, value] = part.split("=", 2);
+    if (key && value) {
+      parts[key.trim()] = value.trim();
+    }
+  }
+
+  const ts = parts["ts"];
+  const v1 = parts["v1"];
+
+  if (!ts || !v1) {
+    return false;
+  }
+
+  const dataId = req.body?.data?.id;
+  const manifest = `id:${dataId};request-id:${xRequestId};ts:${ts};`;
+  const hmac = createHmac("sha256", webhookSecret).update(manifest).digest("hex");
+
+  // Use timing-safe comparison to prevent timing attacks
+  try {
+    const hmacBuffer = Buffer.from(hmac, "hex");
+    const v1Buffer = Buffer.from(v1, "hex");
+    if (hmacBuffer.length !== v1Buffer.length) return false;
+    return timingSafeEqual(hmacBuffer, v1Buffer);
+  } catch {
+    return false;
+  }
+}
 
 // ==================== MercadoPago ====================
 
@@ -60,6 +117,12 @@ router.post(
 // POST /api/payments/mercadopago/webhook
 router.post("/mercadopago/webhook", async (req: Request, res: Response) => {
   try {
+    // Verify webhook signature
+    if (!verifyMercadoPagoSignature(req)) {
+      console.error("MercadoPago webhook signature verification failed");
+      return res.sendStatus(401);
+    }
+
     const { type, data } = req.body;
 
     if (type === "payment") {
@@ -74,6 +137,27 @@ router.post("/mercadopago/webhook", async (req: Request, res: Response) => {
 
       if (payment.status === "approved" && payment.external_reference) {
         const userId = payment.external_reference;
+
+        // Validate user exists
+        const userCheck = await pool.query(
+          "SELECT id FROM app_users WHERE id = $1 AND is_active = true",
+          [userId]
+        );
+        if (userCheck.rows.length === 0) {
+          console.error(`MercadoPago webhook: user not found - userId=${userId}`);
+          return res.sendStatus(200);
+        }
+
+        // Deduplication: check if this payment was already processed
+        const existingPayment = await pool.query(
+          `SELECT id FROM payment_records
+           WHERE provider = 'mercadopago' AND external_id = $1 AND status = 'approved'`,
+          [String(data.id)]
+        );
+        if (existingPayment.rows.length > 0) {
+          console.warn(`MercadoPago webhook: payment already processed - id=${data.id}`);
+          return res.sendStatus(200);
+        }
 
         // Update subscription
         await pool.query(
@@ -104,6 +188,33 @@ router.post("/mercadopago/webhook", async (req: Request, res: Response) => {
            VALUES ($1, 'payment_approved', 'subscription', $2)`,
           [userId, JSON.stringify({ provider: "mercadopago", payment_id: data.id })]
         );
+
+        // Send purchase confirmation email
+        const userResult = await pool.query(
+          `SELECT email, username FROM app_users WHERE id = $1`,
+          [userId]
+        );
+        if (userResult.rows.length > 0) {
+          const user = userResult.rows[0];
+          const expiresAt = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
+          sendEmailViaSinaptya({
+            type: "purchase_confirmation",
+            to: user.email,
+            data: {
+              userName: user.username || user.email.split("@")[0],
+              planName: "Premium Anual",
+              amount: 9.99,
+              currency: "USD",
+              provider: "mercadopago",
+              expiresAt: expiresAt.toLocaleDateString("es-AR", {
+                year: "numeric",
+                month: "long",
+                day: "numeric",
+              }),
+              transactionId: String(data.id),
+            },
+          });
+        }
       }
     }
 
@@ -182,9 +293,23 @@ router.post(
   requireAuth,
   async (req: AuthRequest, res: Response) => {
     try {
-      const { orderId } = req.body;
-      if (!orderId) {
-        return res.status(400).json({ error: "orderId is required" });
+      const parsed = captureOrderSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: parsed.error.errors[0].message });
+      }
+      const { orderId } = parsed.data;
+
+      // Verify this order belongs to the authenticated user (deduplication + ownership)
+      const orderCheck = await pool.query(
+        `SELECT id, status FROM payment_records
+         WHERE provider = 'paypal' AND external_id = $1 AND user_id = $2`,
+        [orderId, req.userId]
+      );
+      if (orderCheck.rows.length === 0) {
+        return res.status(403).json({ error: "Order not found or access denied" });
+      }
+      if (orderCheck.rows[0].status === "approved") {
+        return res.json({ status: "COMPLETED", subscription_active: true });
       }
 
       const clientId = process.env.PAYPAL_CLIENT_ID || "";
@@ -247,6 +372,33 @@ router.post(
            VALUES ($1, 'payment_approved', 'subscription', $2)`,
           [req.userId, JSON.stringify({ provider: "paypal", order_id: orderId })]
         );
+
+        // Send purchase confirmation email
+        const userResult = await pool.query(
+          `SELECT email, username FROM app_users WHERE id = $1`,
+          [req.userId]
+        );
+        if (userResult.rows.length > 0) {
+          const user = userResult.rows[0];
+          const expiresAt = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
+          sendEmailViaSinaptya({
+            type: "purchase_confirmation",
+            to: user.email,
+            data: {
+              userName: user.username || user.email.split("@")[0],
+              planName: "Premium Anual",
+              amount: 9.99,
+              currency: "USD",
+              provider: "paypal",
+              expiresAt: expiresAt.toLocaleDateString("es-AR", {
+                year: "numeric",
+                month: "long",
+                day: "numeric",
+              }),
+              transactionId: orderId,
+            },
+          });
+        }
       }
 
       return res.json({

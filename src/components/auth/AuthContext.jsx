@@ -4,7 +4,6 @@ import {
   onAuthStateChanged,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
-  sendEmailVerification,
   sendPasswordResetEmail,
   signOut,
 } from 'firebase/auth';
@@ -89,8 +88,7 @@ export const AuthProvider = ({ children }) => {
 
   const register = async (email, password) => {
     const credential = await createUserWithEmailAndPassword(auth, email, password);
-    await sendEmailVerification(credential.user);
-    // No dejar la sesión abierta hasta que verifique
+    // Verification email is now sent server-side via onUserCreate trigger + Sinaptya/Resend
     await signOut(auth);
     return credential.user;
   };
