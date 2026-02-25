@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
-import { AuthProvider, useAuth } from '@/components/auth/AuthContext';
+import { useAuth } from '@/components/auth/AuthContext';
 import { LanguageProvider, useLanguage } from '@/components/i18n/LanguageContext';
 import { ThemeProvider, useTheme } from '@/components/theme/ThemeContext';
 
@@ -234,11 +234,9 @@ export default function Layout({ children, currentPageName }) {
     <ErrorBoundary>
       <ThemeProvider>
         <LanguageProvider>
-          <AuthProvider>
-            <LayoutContent currentPageName={currentPageName}>
-              {children}
-            </LayoutContent>
-          </AuthProvider>
+          <LayoutContent currentPageName={currentPageName}>
+            {children}
+          </LayoutContent>
         </LanguageProvider>
       </ThemeProvider>
     </ErrorBoundary>

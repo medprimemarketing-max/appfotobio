@@ -13,6 +13,9 @@ const MainPage = mainPageKey ? Pages[mainPageKey] : <></>;
 // Pages that don't require authentication
 const PUBLIC_PAGES = ['Acceso', 'Registro', 'RecuperarPassword', 'IniciarSesion'];
 
+// Pages accessible with auth but without premium (paywall-free)
+const AUTH_ONLY_PAGES = ['Suscripcion'];
+
 const LayoutWrapper = ({ children, currentPageName }) => Layout ?
   <Layout currentPageName={currentPageName}>{children}</Layout>
   : <>{children}</>;
@@ -30,6 +33,28 @@ const ProtectedRoute = ({ children }) => {
 
   if (!isAuthenticated) {
     return <Navigate to="/Acceso" replace />;
+  }
+
+  return children;
+};
+
+const PremiumRoute = ({ children }) => {
+  const { isAuthenticated, isLoadingAuth, isPremium, isLoadingSubscription } = useAuth();
+
+  if (isLoadingAuth || isLoadingSubscription) {
+    return (
+      <div className="fixed inset-0 flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/Acceso" replace />;
+  }
+
+  if (!isPremium) {
+    return <Navigate to="/Suscripcion" replace />;
   }
 
   return children;
@@ -54,12 +79,18 @@ const AppRoutes = () => {
           <LayoutWrapper currentPageName={mainPageKey}>
             <MainPage />
           </LayoutWrapper>
-        ) : (
+        ) : AUTH_ONLY_PAGES.includes(mainPageKey) ? (
           <ProtectedRoute>
             <LayoutWrapper currentPageName={mainPageKey}>
               <MainPage />
             </LayoutWrapper>
           </ProtectedRoute>
+        ) : (
+          <PremiumRoute>
+            <LayoutWrapper currentPageName={mainPageKey}>
+              <MainPage />
+            </LayoutWrapper>
+          </PremiumRoute>
         )
       } />
 
@@ -78,9 +109,9 @@ const AppRoutes = () => {
           />
         ))}
 
-      {/* Protected pages */}
+      {/* Auth-only pages (no premium required) */}
       {Object.entries(Pages)
-        .filter(([path]) => !PUBLIC_PAGES.includes(path))
+        .filter(([path]) => AUTH_ONLY_PAGES.includes(path))
         .map(([path, Page]) => (
           <Route
             key={path}
@@ -91,6 +122,23 @@ const AppRoutes = () => {
                   <Page />
                 </LayoutWrapper>
               </ProtectedRoute>
+            }
+          />
+        ))}
+
+      {/* Premium pages (require active subscription) */}
+      {Object.entries(Pages)
+        .filter(([path]) => !PUBLIC_PAGES.includes(path) && !AUTH_ONLY_PAGES.includes(path))
+        .map(([path, Page]) => (
+          <Route
+            key={path}
+            path={`/${path}`}
+            element={
+              <PremiumRoute>
+                <LayoutWrapper currentPageName={path}>
+                  <Page />
+                </LayoutWrapper>
+              </PremiumRoute>
             }
           />
         ))}

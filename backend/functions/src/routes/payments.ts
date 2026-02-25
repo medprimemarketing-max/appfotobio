@@ -412,4 +412,71 @@ router.post(
   }
 );
 
+// ==================== Sinaptya Webhook ====================
+
+const sinaptyaWebhookSchema = z.object({
+  email: z.string().email("Invalid email"),
+});
+
+// POST /api/payments/sinaptya/webhook - Sinaptya notifies a successful payment
+router.post("/sinaptya/webhook", async (req: Request, res: Response) => {
+  const secret = process.env.SINAPTYA_WEBHOOK_SECRET;
+  if (!secret || req.headers["x-webhook-secret"] !== secret) {
+    console.error("Sinaptya webhook: invalid or missing secret");
+    return res.sendStatus(401);
+  }
+
+  const parsed = sinaptyaWebhookSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: parsed.error.errors[0].message });
+  }
+
+  const { email } = parsed.data;
+
+  try {
+    // Find user by email
+    const userResult = await pool.query(
+      "SELECT id, subscription_type FROM app_users WHERE email = $1 AND is_active = true",
+      [email]
+    );
+
+    if (userResult.rows.length === 0) {
+      console.error(`Sinaptya webhook: user not found - email=${email}`);
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    const user = userResult.rows[0];
+
+    // Update subscription to premium for 1 year
+    await pool.query(
+      `UPDATE app_users
+       SET subscription_type = 'premium',
+           subscription_expires_at = NOW() + INTERVAL '1 year',
+           updated_at = NOW()
+       WHERE id = $1`,
+      [user.id]
+    );
+
+    // Record payment
+    await pool.query(
+      `INSERT INTO payment_records (user_id, provider, amount, currency, status, metadata)
+       VALUES ($1, 'sinaptya', 0, 'USD', 'approved', $2)`,
+      [user.id, JSON.stringify({ source: "sinaptya_webhook", email })]
+    );
+
+    // Audit log
+    await pool.query(
+      `INSERT INTO audit_log (user_id, action, resource_type, details)
+       VALUES ($1, 'payment_approved', 'subscription', $2)`,
+      [user.id, JSON.stringify({ provider: "sinaptya", email })]
+    );
+
+    console.log(`Sinaptya webhook: subscription activated for ${email}`);
+    return res.json({ success: true, email, subscription_type: "premium" });
+  } catch (error) {
+    console.error("Sinaptya webhook error:", error);
+    return res.sendStatus(500);
+  }
+});
+
 export default router;

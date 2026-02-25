@@ -6,9 +6,9 @@ import { apiClient } from '@/api/apiClient';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { CheckCircle, Crown, Loader2, AlertCircle } from 'lucide-react';
-import MercadoPagoButton from '@/components/payments/MercadoPagoButton';
-import PayPalButton from '@/components/payments/PayPalButton';
+import { CheckCircle, Crown, Loader2, AlertCircle, ExternalLink } from 'lucide-react';
+
+const CHECKOUT_URL = 'https://sinaptya.com/aplicaciones/fotobio';
 
 export default function Suscripcion() {
   const { user, checkAuth } = useAuth();
@@ -22,6 +22,13 @@ export default function Suscripcion() {
     loadSubscription();
   }, []);
 
+  useEffect(() => {
+    if (paymentStatus === 'success') {
+      loadSubscription();
+      checkAuth();
+    }
+  }, [paymentStatus]);
+
   const loadSubscription = async () => {
     try {
       const data = await apiClient.user.subscription();
@@ -30,12 +37,6 @@ export default function Suscripcion() {
       console.error('Error loading subscription:', error);
     }
     setIsLoading(false);
-  };
-
-  const handlePaymentSuccess = () => {
-    setPaymentStatus('success');
-    loadSubscription();
-    checkAuth();
   };
 
   if (isLoading) {
@@ -49,14 +50,14 @@ export default function Suscripcion() {
   return (
     <div className="max-w-2xl mx-auto p-6 space-y-6">
       <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-        {t('subscription.title') || 'Suscripcion'}
+        {t('subscription.title') || 'Suscripción'}
       </h1>
 
       {paymentStatus === 'success' && (
         <Alert className="border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950">
           <CheckCircle className="h-4 w-4 text-green-600" />
           <AlertDescription className="text-green-700 dark:text-green-300">
-            {t('subscription.paymentSuccess') || 'Pago realizado con exito. Tu suscripcion ha sido activada.'}
+            {t('subscription.paymentSuccess') || 'Pago realizado con éxito. Tu suscripción ha sido activada.'}
           </AlertDescription>
         </Alert>
       )}
@@ -110,16 +111,16 @@ export default function Suscripcion() {
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-gray-600 dark:text-gray-400">
-              {t('subscription.premiumDescription') || 'Accede a todos los protocolos, notas clinicas ilimitadas y mas.'}
-            </p>
-            <p className="text-2xl font-bold text-gray-900 dark:text-white">
-              $9.99 USD <span className="text-sm font-normal text-gray-500">/ {t('subscription.year') || 'ano'}</span>
+              {t('subscription.premiumDescription') || 'Accede a todos los protocolos, notas clínicas ilimitadas y más.'}
             </p>
 
-            <div className="space-y-3 pt-4">
-              <MercadoPagoButton onSuccess={handlePaymentSuccess} />
-              <PayPalButton onSuccess={handlePaymentSuccess} />
-            </div>
+            <Button
+              className="w-full bg-violet-600 hover:bg-violet-700 text-white"
+              onClick={() => window.open(CHECKOUT_URL, '_blank')}
+            >
+              <ExternalLink className="w-4 h-4 mr-2" />
+              {t('subscription.goToCheckout') || 'Ir al checkout'}
+            </Button>
           </CardContent>
         </Card>
       )}

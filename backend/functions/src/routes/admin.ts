@@ -19,6 +19,48 @@ const createUserSchema = z.object({
   role: z.enum(["user", "admin"]).default("user"),
 });
 
+// POST /api/admin/bootstrap - One-time endpoint to sync Firebase Auth users and promote to admin
+// Protected by ADMIN_BOOTSTRAP_SECRET env var. Remove after use.
+router.post("/bootstrap", async (req, res) => {
+  const secret = process.env.ADMIN_BOOTSTRAP_SECRET;
+  if (!secret || req.headers["x-bootstrap-secret"] !== secret) {
+    return res.status(403).json({ error: "Forbidden" });
+  }
+
+  const { emails } = req.body;
+  if (!Array.isArray(emails) || emails.length === 0) {
+    return res.status(400).json({ error: "emails array required" });
+  }
+
+  try {
+    const results: any[] = [];
+
+    for (const email of emails) {
+      try {
+        // Get Firebase Auth user
+        const firebaseUser = await admin.auth().getUserByEmail(email);
+
+        // Upsert into app_users
+        await pool.query(
+          `INSERT INTO app_users (firebase_uid, email, role)
+           VALUES ($1, $2, 'admin')
+           ON CONFLICT (email) DO UPDATE SET role = 'admin', updated_at = NOW()`,
+          [firebaseUser.uid, email]
+        );
+
+        results.push({ email, status: "admin", firebase_uid: firebaseUser.uid });
+      } catch (err: any) {
+        results.push({ email, status: "error", message: err.message });
+      }
+    }
+
+    return res.json({ results });
+  } catch (error) {
+    console.error("Bootstrap error:", error);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 // POST /api/admin/users - Create a new user (admin only)
 router.post("/users", requireAuth, requireAdmin, async (req: AuthRequest, res) => {
   const parsed = createUserSchema.safeParse(req.body);

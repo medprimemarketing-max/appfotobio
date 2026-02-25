@@ -8,6 +8,7 @@ import {
   signOut,
 } from 'firebase/auth';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { apiClient } from '@/api/apiClient';
 
 const AuthContext = createContext();
 
@@ -22,6 +23,21 @@ const firebaseUserToProfile = (firebaseUser) => ({
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [subscription, setSubscription] = useState(null);
+  const [isLoadingSubscription, setIsLoadingSubscription] = useState(false);
+
+  const fetchSubscription = async () => {
+    try {
+      setIsLoadingSubscription(true);
+      const data = await apiClient.user.subscription();
+      setSubscription(data);
+    } catch (error) {
+      console.error('Error fetching subscription:', error);
+      setSubscription(null);
+    } finally {
+      setIsLoadingSubscription(false);
+    }
+  };
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
@@ -47,8 +63,10 @@ export const AuthProvider = ({ children }) => {
           console.error('Error fetching user profile from Firestore:', error);
           setUser(profile);
         }
+        await fetchSubscription();
       } else {
         setUser(null);
+        setSubscription(null);
       }
       setIsLoading(false);
     });
@@ -83,6 +101,7 @@ export const AuthProvider = ({ children }) => {
       console.error('Error fetching profile:', error);
       setUser(profile);
     }
+    await fetchSubscription();
     return profile;
   };
 
@@ -100,6 +119,7 @@ export const AuthProvider = ({ children }) => {
   const logout = async () => {
     await signOut(auth);
     setUser(null);
+    setSubscription(null);
   };
 
   const checkAuth = async () => {
@@ -114,8 +134,11 @@ export const AuthProvider = ({ children }) => {
       } catch {
         setUser(profile);
       }
+      await fetchSubscription();
     }
   };
+
+  const isPremium = subscription?.is_active && subscription?.subscription_type !== 'free';
 
   return (
     <AuthContext.Provider value={{
@@ -124,6 +147,9 @@ export const AuthProvider = ({ children }) => {
       isLoadingAuth: isLoading,
       isAuthenticated: !!user,
       authError: null,
+      subscription,
+      isPremium: !!isPremium,
+      isLoadingSubscription,
       login,
       logout,
       register,

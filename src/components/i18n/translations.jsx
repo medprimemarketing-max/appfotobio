@@ -181,6 +181,21 @@ export const translations = {
       clinicalComments: "Comentarios clínicos",
       clinicalConsiderations: "Información complementaria / Consideraciones clínicas"
     },
+    subscription: {
+      title: "Suscripción",
+      currentPlan: "Plan actual",
+      expiresAt: "Expira:",
+      active: "Activa",
+      upgradeToPremium: "Actualizar a Premium",
+      premiumDescription: "Accede a todos los protocolos, notas clínicas ilimitadas y más.",
+      year: "año",
+      payWithMercadoPago: "Pagar con MercadoPago",
+      payWithPayPal: "Pagar con PayPal",
+      paymentSuccess: "Pago realizado con éxito. Tu suscripción ha sido activada.",
+      paymentFailed: "El pago no pudo completarse. Por favor intenta nuevamente.",
+      paymentError: "Error al iniciar el pago",
+      goToCheckout: "Ir al checkout"
+    },
     categories: {
       VOZ: "Voz",
       DEGLUCION: "Deglución",
@@ -376,6 +391,21 @@ export const translations = {
       clinicalComments: "Clinical comments",
       clinicalConsiderations: "Complementary information / Clinical considerations"
     },
+    subscription: {
+      title: "Subscription",
+      currentPlan: "Current plan",
+      expiresAt: "Expires:",
+      active: "Active",
+      upgradeToPremium: "Upgrade to Premium",
+      premiumDescription: "Access all protocols, unlimited clinical notes and more.",
+      year: "year",
+      payWithMercadoPago: "Pay with MercadoPago",
+      payWithPayPal: "Pay with PayPal",
+      paymentSuccess: "Payment successful. Your subscription has been activated.",
+      paymentFailed: "Payment could not be completed. Please try again.",
+      paymentError: "Error initiating payment",
+      goToCheckout: "Go to checkout"
+    },
     categories: {
       VOZ: "Voice",
       DEGLUCION: "Swallowing",
@@ -570,6 +600,21 @@ export const translations = {
       evidenceLevel: "Nível de evidência",
       clinicalComments: "Comentários clínicos",
       clinicalConsiderations: "Informação complementar / Considerações clínicas"
+    },
+    subscription: {
+      title: "Assinatura",
+      currentPlan: "Plano atual",
+      expiresAt: "Expira:",
+      active: "Ativa",
+      upgradeToPremium: "Atualizar para Premium",
+      premiumDescription: "Acesse todos os protocolos, notas clínicas ilimitadas e mais.",
+      year: "ano",
+      payWithMercadoPago: "Pagar com MercadoPago",
+      payWithPayPal: "Pagar com PayPal",
+      paymentSuccess: "Pagamento realizado com sucesso. Sua assinatura foi ativada.",
+      paymentFailed: "O pagamento não pôde ser concluído. Por favor, tente novamente.",
+      paymentError: "Erro ao iniciar o pagamento",
+      goToCheckout: "Ir para o checkout"
     },
     categories: {
       VOZ: "Voz",

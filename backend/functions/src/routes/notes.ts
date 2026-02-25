@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { AuthRequest, requireAuth } from "../middleware/auth";
+import { AuthRequest, requireAuth, requirePremium } from "../middleware/auth";
 import { z } from "zod";
 import pool from "../db";
 
@@ -43,7 +43,7 @@ const updateNoteSchema = z.object({
 });
 
 // GET /api/notes?pathology_id=X - List notes for current user
-router.get("/", requireAuth, async (req: AuthRequest, res) => {
+router.get("/", requireAuth, requirePremium, async (req: AuthRequest, res) => {
   const parsed = getNotesQuerySchema.safeParse(req.query);
 
   if (!parsed.success) {
@@ -69,7 +69,7 @@ router.get("/", requireAuth, async (req: AuthRequest, res) => {
 });
 
 // POST /api/notes - Create a new clinical note
-router.post("/", requireAuth, async (req: AuthRequest, res) => {
+router.post("/", requireAuth, requirePremium, async (req: AuthRequest, res) => {
   const parsed = createNoteSchema.safeParse(req.body);
 
   if (!parsed.success) {
@@ -112,7 +112,7 @@ router.post("/", requireAuth, async (req: AuthRequest, res) => {
 });
 
 // PUT /api/notes/:id - Update a clinical note
-router.put("/:id", requireAuth, async (req: AuthRequest, res) => {
+router.put("/:id", requireAuth, requirePremium, async (req: AuthRequest, res) => {
   const { id } = req.params;
 
   const parsed = updateNoteSchema.safeParse(req.body);
@@ -171,7 +171,7 @@ router.put("/:id", requireAuth, async (req: AuthRequest, res) => {
 });
 
 // DELETE /api/notes/:id - Delete a clinical note
-router.delete("/:id", requireAuth, async (req: AuthRequest, res) => {
+router.delete("/:id", requireAuth, requirePremium, async (req: AuthRequest, res) => {
   const { id } = req.params;
 
   try {

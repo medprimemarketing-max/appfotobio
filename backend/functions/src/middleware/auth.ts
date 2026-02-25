@@ -7,6 +7,8 @@ export interface AuthRequest extends Request {
   userId?: string; // UUID from app_users
   userRole?: string;
   userEmail?: string;
+  subscriptionType?: string;
+  subscriptionExpiresAt?: Date | null;
 }
 
 /**
@@ -30,7 +32,7 @@ export async function requireAuth(
 
     // Fetch app_users row
     const result = await pool.query(
-      "SELECT id, role, email FROM app_users WHERE firebase_uid = $1 AND is_active = true",
+      "SELECT id, role, email, subscription_type, subscription_expires_at FROM app_users WHERE firebase_uid = $1 AND is_active = true",
       [decoded.uid]
     );
 
@@ -41,12 +43,34 @@ export async function requireAuth(
     req.userId = result.rows[0].id;
     req.userRole = result.rows[0].role;
     req.userEmail = result.rows[0].email;
+    req.subscriptionType = result.rows[0].subscription_type || "free";
+    req.subscriptionExpiresAt = result.rows[0].subscription_expires_at;
 
     return next();
   } catch (error) {
     console.error("Auth middleware error:", error);
     return res.status(401).json({ error: "Invalid or expired token" });
   }
+}
+
+/**
+ * Middleware: require active premium subscription (must be used after requireAuth).
+ */
+export function requirePremium(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+) {
+  if (req.subscriptionType === "free" || !req.subscriptionType) {
+    return res.status(403).json({ error: "Premium subscription required" });
+  }
+
+  // Check if subscription has expired
+  if (req.subscriptionExpiresAt && new Date(req.subscriptionExpiresAt) < new Date()) {
+    return res.status(403).json({ error: "Premium subscription required" });
+  }
+
+  return next();
 }
 
 /**
