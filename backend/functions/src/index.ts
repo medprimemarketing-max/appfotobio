@@ -27,6 +27,7 @@ const allowedOrigins = process.env.ALLOWED_ORIGINS
   : [
       "https://fbmfonoaudiologia.web.app",
       "https://fbmfonoaudiologia.firebaseapp.com",
+      "http://localhost:5173",
     ];
 
 app.use(helmet());

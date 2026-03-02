@@ -104,6 +104,115 @@ router.post("/users", requireAuth, requireAdmin, async (req: AuthRequest, res) =
   }
 });
 
+// GET /api/admin/users - List all users with subscription and role
+router.get("/users", requireAuth, requireAdmin, async (req: AuthRequest, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT id, firebase_uid, email, username, role, subscription_type,
+              subscription_expires_at, is_active, created_at, updated_at
+       FROM app_users
+       ORDER BY created_at DESC`
+    );
+    return res.json(result.rows);
+  } catch (error) {
+    console.error("Error listing users:", error);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// PUT /api/admin/users/:id/subscription - Activate/modify subscription manually
+router.put("/users/:id/subscription", requireAuth, requireAdmin, async (req: AuthRequest, res) => {
+  const { id } = req.params;
+  const schema = z.object({
+    subscription_type: z.enum(["free", "premium_annual"]),
+    active: z.boolean(),
+    duration_days: z.number().int().min(1).max(730).optional(),
+    start_date: z.string().optional(),
+  });
+
+  const parsed = schema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: parsed.error.errors[0].message });
+  }
+
+  const { subscription_type, active, duration_days, start_date } = parsed.data;
+
+  try {
+    let expiresAt: string | null = null;
+
+    if (active && subscription_type === "premium_annual") {
+      const startFrom = start_date ? new Date(start_date) : new Date();
+      const days = duration_days || 365;
+      expiresAt = new Date(startFrom.getTime() + days * 24 * 60 * 60 * 1000).toISOString();
+    }
+
+    const result = await pool.query(
+      `UPDATE app_users
+       SET subscription_type = $1,
+           subscription_expires_at = $2,
+           is_active = $3,
+           updated_at = NOW()
+       WHERE id = $4
+       RETURNING id, email, subscription_type, subscription_expires_at, is_active`,
+      [subscription_type, expiresAt, active, id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    await pool.query(
+      `INSERT INTO audit_log (user_id, action, resource_type, resource_id, details)
+       VALUES ($1, 'admin_update_subscription', 'user', $2, $3)`,
+      [req.userId, id, JSON.stringify({ subscription_type, active, duration_days, start_date })]
+    );
+
+    return res.json(result.rows[0]);
+  } catch (error) {
+    console.error("Error updating subscription:", error);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// PUT /api/admin/users/:id/role - Change user role
+router.put("/users/:id/role", requireAuth, requireAdmin, async (req: AuthRequest, res) => {
+  const { id } = req.params;
+  const schema = z.object({
+    role: z.enum(["user", "admin"]),
+  });
+
+  const parsed = schema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: parsed.error.errors[0].message });
+  }
+
+  const { role } = parsed.data;
+
+  try {
+    const result = await pool.query(
+      `UPDATE app_users SET role = $1, updated_at = NOW()
+       WHERE id = $2
+       RETURNING id, email, role`,
+      [role, id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    await pool.query(
+      `INSERT INTO audit_log (user_id, action, resource_type, resource_id, details)
+       VALUES ($1, 'admin_update_role', 'user', $2, $3)`,
+      [req.userId, id, JSON.stringify({ role })]
+    );
+
+    return res.json(result.rows[0]);
+  } catch (error) {
+    console.error("Error updating role:", error);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 // POST /api/admin/export - Export standalone data (admin only)
 router.post("/export", requireAuth, requireAdmin, async (req: AuthRequest, res) => {
   try {

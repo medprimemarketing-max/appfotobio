@@ -16,6 +16,9 @@ const PUBLIC_PAGES = ['Acceso', 'Registro', 'RecuperarPassword', 'IniciarSesion'
 // Pages accessible with auth but without premium (paywall-free)
 const AUTH_ONLY_PAGES = ['Suscripcion'];
 
+// Pages that require admin role
+const ADMIN_PAGES = ['Admin'];
+
 const LayoutWrapper = ({ children, currentPageName }) => Layout ?
   <Layout currentPageName={currentPageName}>{children}</Layout>
   : <>{children}</>;
@@ -38,8 +41,30 @@ const ProtectedRoute = ({ children }) => {
   return children;
 };
 
+const AdminRoute = ({ children }) => {
+  const { isAuthenticated, isLoadingAuth, isAdmin } = useAuth();
+
+  if (isLoadingAuth) {
+    return (
+      <div className="fixed inset-0 flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/Acceso" replace />;
+  }
+
+  if (!isAdmin) {
+    return <Navigate to="/Dashboard" replace />;
+  }
+
+  return children;
+};
+
 const PremiumRoute = ({ children }) => {
-  const { isAuthenticated, isLoadingAuth, isPremium, isLoadingSubscription } = useAuth();
+  const { isAuthenticated, isLoadingAuth, isPremium, isLoadingSubscription, isAdmin } = useAuth();
 
   if (isLoadingAuth || isLoadingSubscription) {
     return (
@@ -53,7 +78,7 @@ const PremiumRoute = ({ children }) => {
     return <Navigate to="/Acceso" replace />;
   }
 
-  if (!isPremium) {
+  if (!isPremium && !isAdmin) {
     return <Navigate to="/Suscripcion" replace />;
   }
 
@@ -126,9 +151,26 @@ const AppRoutes = () => {
           />
         ))}
 
+      {/* Admin pages (require admin role) */}
+      {Object.entries(Pages)
+        .filter(([path]) => ADMIN_PAGES.includes(path))
+        .map(([path, Page]) => (
+          <Route
+            key={path}
+            path={`/${path}`}
+            element={
+              <AdminRoute>
+                <LayoutWrapper currentPageName={path}>
+                  <Page />
+                </LayoutWrapper>
+              </AdminRoute>
+            }
+          />
+        ))}
+
       {/* Premium pages (require active subscription) */}
       {Object.entries(Pages)
-        .filter(([path]) => !PUBLIC_PAGES.includes(path) && !AUTH_ONLY_PAGES.includes(path))
+        .filter(([path]) => !PUBLIC_PAGES.includes(path) && !AUTH_ONLY_PAGES.includes(path) && !ADMIN_PAGES.includes(path))
         .map(([path, Page]) => (
           <Route
             key={path}

@@ -46,6 +46,9 @@ export const apiClient = {
   },
   admin: {
     createUser: (data) => request('POST', '/api/admin/users', data),
+    listUsers: () => request('GET', '/api/admin/users'),
+    updateSubscription: (id, data) => request('PUT', `/api/admin/users/${encodeURIComponent(id)}/subscription`, data),
+    updateRole: (id, data) => request('PUT', `/api/admin/users/${encodeURIComponent(id)}/role`, data),
     export: () => request('POST', '/api/admin/export'),
   },
   payments: {

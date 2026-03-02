@@ -16,12 +16,14 @@ import ExportarStandalone from './pages/ExportarStandalone';
 import Registro from './pages/Registro';
 import RecuperarPassword from './pages/RecuperarPassword';
 import Suscripcion from './pages/Suscripcion';
+import Admin from './pages/Admin';
 import __Layout from './Layout.jsx';
 
 
 export const PAGES = {
     "Acceso": Acceso,
     "AcercaDe": AcercaDe,
+    "Admin": Admin,
     "Dashboard": Dashboard,
     "IniciarSesion": IniciarSesion,
     "Patologia": Patologia,
