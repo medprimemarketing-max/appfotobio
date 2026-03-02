@@ -27,6 +27,8 @@ const allowedOrigins = process.env.ALLOWED_ORIGINS
   : [
       "https://fbmfonoaudiologia.web.app",
       "https://fbmfonoaudiologia.firebaseapp.com",
+      "https://fbmfonoaudiologia.com",
+      "https://www.fbmfonoaudiologia.com",
       "http://localhost:5173",
     ];
 
