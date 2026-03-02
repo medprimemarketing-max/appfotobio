@@ -139,6 +139,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   const isPremium = subscription?.is_active && subscription?.subscription_type !== 'free';
+  const isAdmin = user?.role === 'admin';
 
   return (
     <AuthContext.Provider value={{
@@ -146,6 +147,7 @@ export const AuthProvider = ({ children }) => {
       isLoading,
       isLoadingAuth: isLoading,
       isAuthenticated: !!user,
+      isAdmin,
       authError: null,
       subscription,
       isPremium: !!isPremium,

@@ -34,30 +34,30 @@ async function request(method, path, body = undefined) {
 
 export const apiClient = {
   user: {
-    me: () => request('GET', '/api/user/me'),
-    updateLanguage: (language) => request('PUT', '/api/user/language', { language }),
-    subscription: () => request('GET', '/api/user/subscription'),
+    me: () => request('GET', '/user/me'),
+    updateLanguage: (language) => request('PUT', '/user/language', { language }),
+    subscription: () => request('GET', '/user/subscription'),
   },
   notes: {
-    list: (pathologyId) => request('GET', `/api/notes?pathology_id=${encodeURIComponent(pathologyId)}`),
-    create: (data) => request('POST', '/api/notes', data),
-    update: (id, data) => request('PUT', `/api/notes/${id}`, data),
-    delete: (id) => request('DELETE', `/api/notes/${id}`),
+    list: (pathologyId) => request('GET', `/notes?pathology_id=${encodeURIComponent(pathologyId)}`),
+    create: (data) => request('POST', '/notes', data),
+    update: (id, data) => request('PUT', `/notes/${id}`, data),
+    delete: (id) => request('DELETE', `/notes/${id}`),
   },
   admin: {
-    createUser: (data) => request('POST', '/api/admin/users', data),
-    listUsers: () => request('GET', '/api/admin/users'),
-    updateSubscription: (id, data) => request('PUT', `/api/admin/users/${encodeURIComponent(id)}/subscription`, data),
-    updateRole: (id, data) => request('PUT', `/api/admin/users/${encodeURIComponent(id)}/role`, data),
-    export: () => request('POST', '/api/admin/export'),
+    createUser: (data) => request('POST', '/admin/users', data),
+    listUsers: () => request('GET', '/admin/users'),
+    updateSubscription: (id, data) => request('PUT', `/admin/users/${encodeURIComponent(id)}/subscription`, data),
+    updateRole: (id, data) => request('PUT', `/admin/users/${encodeURIComponent(id)}/role`, data),
+    export: () => request('POST', '/admin/export'),
   },
   payments: {
     mercadopago: {
-      createPreference: () => request('POST', '/api/payments/mercadopago/create-preference'),
+      createPreference: () => request('POST', '/payments/mercadopago/create-preference'),
     },
     paypal: {
-      createOrder: () => request('POST', '/api/payments/paypal/create-order'),
-      captureOrder: (orderId) => request('POST', '/api/payments/paypal/capture-order', { orderId }),
+      createOrder: () => request('POST', '/payments/paypal/create-order'),
+      captureOrder: (orderId) => request('POST', '/payments/paypal/capture-order', { orderId }),
     },
   },
 };

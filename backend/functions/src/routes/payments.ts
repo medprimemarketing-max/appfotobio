@@ -1,4 +1,5 @@
 import { Router, Request, Response } from "express";
+import * as admin from "firebase-admin";
 import { AuthRequest, requireAuth } from "../middleware/auth";
 import { createHmac, timingSafeEqual } from "crypto";
 import { z } from "zod";
@@ -435,14 +436,74 @@ router.post("/sinaptya/webhook", async (req: Request, res: Response) => {
 
   try {
     // Find user by email
-    const userResult = await pool.query(
+    let userResult = await pool.query(
       "SELECT id, subscription_type FROM app_users WHERE email = $1 AND is_active = true",
       [email]
     );
 
+    // Si no existe, crear cuenta en Firebase Auth y en app_users
     if (userResult.rows.length === 0) {
-      console.error(`Sinaptya webhook: user not found - email=${email}`);
-      return res.status(404).json({ error: "User not found" });
+      console.log(`Sinaptya webhook: user not found, creating account for ${email}`);
+
+      let firebaseUid: string;
+
+      // Intentar obtener o crear usuario en Firebase Auth
+      try {
+        const existingUser = await admin.auth().getUserByEmail(email);
+        firebaseUid = existingUser.uid;
+      } catch (authError: any) {
+        if (authError.code === "auth/user-not-found") {
+          const tempPassword =
+            Math.random().toString(36).slice(-10) +
+            "A1!" +
+            Math.random().toString(36).slice(-2);
+          const newUser = await admin.auth().createUser({
+            email,
+            password: tempPassword,
+            emailVerified: false,
+          });
+          firebaseUid = newUser.uid;
+          console.log(`Sinaptya webhook: Firebase Auth user created for ${email}`);
+
+          // Enviar email de reset de contrasena
+          try {
+            const resetLink = await admin.auth().generatePasswordResetLink(email);
+            await sendEmailViaSinaptya({
+              type: "verification",
+              to: email,
+              data: {
+                userName: email.split("@")[0],
+                verificationLink: resetLink,
+              },
+            });
+          } catch (emailError) {
+            console.error("Sinaptya webhook: error sending reset email:", emailError);
+          }
+        } else {
+          throw authError;
+        }
+      }
+
+      // Crear fila en app_users
+      await pool.query(
+        `INSERT INTO app_users (firebase_uid, email, username)
+         VALUES ($1, $2, $3)
+         ON CONFLICT (firebase_uid) DO NOTHING`,
+        [firebaseUid, email, email.split("@")[0]]
+      );
+
+      // Re-consultar para obtener el id
+      userResult = await pool.query(
+        "SELECT id, subscription_type FROM app_users WHERE email = $1 AND is_active = true",
+        [email]
+      );
+
+      if (userResult.rows.length === 0) {
+        console.error(`Sinaptya webhook: failed to create user for ${email}`);
+        return res.status(500).json({ error: "Failed to create user" });
+      }
+
+      console.log(`Sinaptya webhook: user created successfully for ${email}`);
     }
 
     const user = userResult.rows[0];

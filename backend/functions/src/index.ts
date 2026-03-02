@@ -63,19 +63,19 @@ const sensitiveLimiter = rateLimit({
   message: { error: "Too many requests to sensitive endpoint, please try again later" },
 });
 
-app.use("/api/payments/mercadopago/webhook", webhookLimiter);
-app.use("/api/admin", sensitiveLimiter);
-app.use("/api/payments", sensitiveLimiter);
+app.use("/payments/mercadopago/webhook", webhookLimiter);
+app.use("/admin", sensitiveLimiter);
+app.use("/payments", sensitiveLimiter);
 app.use(generalLimiter);
 
 // Routes
-app.use("/api/user", userRoutes);
-app.use("/api/notes", notesRoutes);
-app.use("/api/admin", adminRoutes);
-app.use("/api/payments", paymentsRoutes);
+app.use("/user", userRoutes);
+app.use("/notes", notesRoutes);
+app.use("/admin", adminRoutes);
+app.use("/payments", paymentsRoutes);
 
 // Health check
-app.get("/api/health", (_req, res) => {
+app.get("/health", (_req, res) => {
   res.json({ status: "ok", timestamp: new Date().toISOString() });
 });
 
